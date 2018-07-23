@@ -1,0 +1,244 @@
+<!-- formerly decryptToolchain.html -->
+<html>
+<head>
+	<!-- <script type="text/javascript" src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/aes.js"></script> -->
+	<script type="text/javascript">
+		function go() {
+			var input = document.getElementById('input'),
+				toolchain = document.getElementById('toolchain'),
+				output = document.getElementById('output'),
+				selectTemplate = document.createElement('span'),
+				common = {
+					shiftChar: function(c, shift) {
+						var aPos = (c === c.toLowerCase()) ? 97 : 65,
+							charCode = (c.charCodeAt(0) - aPos + shift) % 26 + aPos;
+						return String.fromCharCode((charCode - aPos < 0) ? (26 + charCode) : charCode);
+					},
+					leftPad: function(str, width, character) {
+						return (Array(width + 1).join(character || ' ') + str).slice(-width);
+					}
+				},
+				tools = {
+					baconian: function(str, swapChars) { // swapChars = AB,CD,JK
+						function Tr(s, f, t) {
+							var o = '';
+							for (var i = 0; i < s.length; i ++) {
+								var c = s.charAt(i);
+								var idx = f.indexOf(c);
+								if (idx >= 0) {
+									if (idx < t.length) {
+										o += t.charAt(idx);
+									}
+								} else {
+									o += c;
+								}
+							}
+							return o;
+						}
+
+						var out = '',
+							buffer = '',
+							addSpace = 0,
+							alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+						if (swapChars) {
+							swapChars.split(',').forEach(function(pair) {
+								if (pair.length === 2) {
+									alphabet = alphabet.replace(new RegExp('[' + pair + ']', 'g'), function(m) {
+										return pair.replace(m, '');
+									});
+								}
+							});
+						}
+
+						str = str.toUpperCase();
+						str = Tr(str, '01', 'AB');
+
+						for (var i = 0; i < str.length; i ++) {
+							var c = str.charAt(i);
+
+							if (c == 'A' || c == 'B') {
+								buffer += c;
+							} else if (buffer == '') {
+								addSpace = 1;
+							}
+
+							if (buffer.length == 5) {
+								var idx = 0;
+
+								idx += (buffer.charAt(0) == 'A') ? 0 : 16;
+								idx += (buffer.charAt(1) == 'A') ? 0 : 8;
+								idx += (buffer.charAt(2) == 'A') ? 0 : 4;
+								idx += (buffer.charAt(3) == 'A') ? 0 : 2;
+								idx += (buffer.charAt(4) == 'A') ? 0 : 1;
+
+								buffer = '';
+
+								if (addSpace) {
+									out += ' ';
+									addSpace = 0;
+								}
+
+								out += alphabet.charAt(idx);
+							}
+						}
+
+						return out;
+					},
+					binaryToASCII: function(str) { // No options
+						return str.replace(/\s*[01]{8}\s*/g, function(m) {
+							return String.fromCharCode(parseInt(m, 2));
+						});
+					},
+					caesar: function(str, offset) { // offset = 0..25
+						function shift(s, off) {
+							return s.replace(/[a-zA-Z]/g, function(m) {
+								return common.shiftChar(m, off);
+							});
+						}
+						offset = parseInt(offset, 10);
+						if (!isNaN(offset)) {
+							return shift(str, offset);
+						} else {
+							var out = '';
+							for (var i = 0; i < 26; i++) {
+								out += common.leftPad(i, 2) + '> ' + shift(str, i) + '\n';
+							}
+							return out;
+						}
+					},
+					vigenere: function(str, key) { // key = caesar
+						var i = 0;
+						offsets = key.split('').map(function(c) {
+							return c.toUpperCase().charCodeAt(0) - 65;
+						});
+						return str.replace(/[a-zA-Z]/g, function(m) {
+							i = (offsets.length <= i) ? 0 : i;
+							return common.shiftChar(m, 0 - offsets[i++]);
+						});
+					},
+					debase64: atob,
+					lowercase: function(str) {
+						return str.toLowerCase();
+					},
+					uppercase: function(str) {
+						return str.toUpperCase();
+					}
+					/*AES256: function(data, key) { // key = bacon
+						// Attribution: https://stackoverflow.com/questions/14958103/how-to-decrypt-message-with-cryptojs-aes-i-have-a-working-ruby-example
+						// Decode the base64 data so we can separate iv and crypt text.
+						var rawData = atob(data);console.log([data,key]);
+						var iv = rawData.substring(0,16);
+						var crypttext = rawData.substring(16);
+						// Decrypt...
+						var plaintextArray = CryptoJS.AES.decrypt(
+						  { ciphertext: CryptoJS.enc.Latin1.parse(crypttext) },
+						  CryptoJS.enc.Base64.parse(key),
+						  { iv: CryptoJS.enc.Latin1.parse(iv) }
+						);
+						return CryptoJS.enc.Latin1.stringify(plaintextArray);
+					}*/
+				};
+
+			(function setupTemplate() {
+				selectTemplate.classList.add('option');
+				var select = document.createElement('select');
+				for (var t in tools) {
+					var option = document.createElement('option');
+					option.textContent = t;
+					select.appendChild(option);
+				}
+				selectTemplate.appendChild(select);
+
+				var input = document.createElement('input');
+				input.type = 'text';
+				selectTemplate.appendChild(input);
+			})();
+
+			function add() { toolchain.appendChild(selectTemplate.cloneNode(true)); }
+			function remove() { toolchain.removeChild(toolchain.lastChild); }
+
+			add();
+
+			function updateOutput() {
+				output.value = Array.prototype.slice.call(toolchain.childNodes).reduce(function(text, e) {
+					return tools[e.querySelector('select').value].call(window, text, e.querySelector('input').value);
+				}, input.value);
+			}
+
+			input.addEventListener('input', updateOutput);
+			toolchain.addEventListener('change', updateOutput);
+			toolchain.addEventListener('input', updateOutput);
+			output.addEventListener('click', updateOutput);
+
+			document.getElementById('add').addEventListener('click', function() {
+				add();
+				updateOutput();
+			});
+			document.getElementById('remove').addEventListener('click', function() {
+				remove();
+				updateOutput();
+			});
+		}
+	</script>
+	<style type="text/css">
+		body {
+			background-color: lightgrey;
+		}
+		body * {
+			margin: 10px;
+		}
+		.main, .options, .option { /* basic flex alignment */
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-direction: column;
+		}
+			textarea {
+				width: 75%;
+				height: 40%;
+				box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.5);
+			}
+			.options {
+				flex-direction: row;
+			}
+				#remove, #add {
+					cursor: pointer;
+					padding: 10px 20px;
+					background-color: darkgrey;
+					color: white;
+					font-family: monospace;
+					font-size: 20px;
+					font-weight: bold;
+				}
+				.option {
+					display: inline-flex;
+				}
+				select, input {
+					width: 150px;
+				}
+			.cipher {
+				font-family: monospace;
+			}
+	</style>
+</head>
+<body>
+	<div class="main">
+		<textarea id="input"></textarea>
+		<div class="options">
+			<span id="remove" class="button">-</span>
+			<span id="toolchain"></span>
+			<span id="add" class="button">+</span>
+		</div>
+		<textarea id="output" readonly></textarea>
+		<div class="cipher">
+			<p>sausage -> binaryASCII</p>
+			<p>salmon -> baconian</p>
+			<p>salad -> caesar (by 20?)</p>
+			<p>sauce -> vigenere (key "caesar")</p>
+			<p>seaweed -> <a href="http://aesencryption.net">AES256 (key "bacon")</a></p>
+		</div>
+	</div>
+	<script type="text/javascript">go();</script>
+</body>
+</html>
