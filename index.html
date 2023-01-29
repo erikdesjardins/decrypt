@@ -3,7 +3,7 @@
 <head>
 	<!-- <script type="text/javascript" src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/aes.js"></script> -->
 	<script defer type="text/javascript">
-		(function go() {
+		function go() {
 			var input = document.getElementById('input'),
 				toolchain = document.getElementById('toolchain'),
 				output = document.getElementById('output'),
@@ -184,7 +184,7 @@
 				remove();
 				updateOutput();
 			});
-		})();
+		}
 	</script>
 	<style type="text/css">
 		body {
@@ -244,5 +244,6 @@
 			<p>seaweed -> <a href="http://aesencryption.net">AES256 (key "bacon")</a></p>
 		</div>
 	</div>
+	<script defer type="text/javascript">go();</script>
 </body>
 </html>
