@@ -91,7 +91,7 @@
 						});
 					},
 					hexToASCII: function(str) { // No options
-						return str.replace(/[0-9a-f]{2}/g, function(m) {
+						return str.replace(/[0-9a-fA-F]{2}/g, function(m) {
 							return String.fromCharCode(parseInt(m, 16));
 						});
 					},
