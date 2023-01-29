@@ -2,8 +2,8 @@
 <html>
 <head>
 	<!-- <script type="text/javascript" src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/aes.js"></script> -->
-	<script type="text/javascript">
-		function go() {
+	<script defer type="text/javascript">
+		(function go() {
 			var input = document.getElementById('input'),
 				toolchain = document.getElementById('toolchain'),
 				output = document.getElementById('output'),
@@ -88,6 +88,11 @@
 					binaryToASCII: function(str) { // No options
 						return str.replace(/\s*[01]{8}\s*/g, function(m) {
 							return String.fromCharCode(parseInt(m, 2));
+						});
+					},
+					hexToASCII: function(str) { // No options
+						return str.replace(/[0-9a-f]{2}/g, function(m) {
+							return String.fromCharCode(parseInt(m, 16));
 						});
 					},
 					caesar: function(str, offset) { // offset = 0..25
@@ -179,7 +184,7 @@
 				remove();
 				updateOutput();
 			});
-		}
+		})();
 	</script>
 	<style type="text/css">
 		body {
@@ -239,6 +244,5 @@
 			<p>seaweed -> <a href="http://aesencryption.net">AES256 (key "bacon")</a></p>
 		</div>
 	</div>
-	<script type="text/javascript">go();</script>
 </body>
 </html>
